@@ -1,7 +1,8 @@
 import logging
 
-from os import getenv
+import os
 import asyncio
+from aiohttp import web
 from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
 from handlers.routes import router
@@ -15,10 +16,14 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 load_dotenv()
-TOKEN = getenv("BOT_TOKEN")
+TOKEN = os.getenv("BOT_TOKEN")
 
 dp = Dispatcher()
 dp.include_router(router)
+
+async def handle_ping(request):
+    return web.Response(text="The bot is running successfully")
+
 
 async def main():
     bot = Bot(token=TOKEN)
@@ -76,6 +81,16 @@ async def main():
     logger.info(f"Tasks successfully restored from the database: {len(all_task)}")
 
     scheduler.start()
+
+    app = web.Application()
+    app.router.add_get('/', handle_ping)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    
+    port = int(os.environ.get("PORT", 8080))
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    logger.info(f"Dummy web server started on port {port}")
 
     logger.info("Start...")
     await dp.start_polling(bot)
