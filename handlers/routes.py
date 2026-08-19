@@ -87,7 +87,7 @@ def get_inline_keyboard(special_button=None, buttons=None, selected_days=None):
 
 
 def get_cancel_keyboard(lang:str):
-    button = {"name": f"{get_text(lang, 'btn_cancel')}", "callback": "action_cancel"}
+    button = {"name": get_text(lang, 'btn_cancel'), "callback": "action_cancel"}
     return get_inline_keyboard(special_button=button)
 
 
@@ -134,7 +134,7 @@ async def proccess_task_name(message: Message, state: FSMContext):
     await state.update_data(task_name=message.text)
     lang = await get_user_lang(message.from_user.id)
     text = get_text(lang, "enter_time")
-    await message.answer(text)
+    await message.answer(text, reply_markup=get_cancel_keyboard(lang))
     await state.set_state(Task.hours)
 
 
