@@ -183,7 +183,7 @@ async def proccess_time(message: Message, state: FSMContext):
     buttons = [
         {"name": f"{button_1}", "callback": "kiev"},
         {"name": f"{button_2}", "callback": "input_time_zone"},
-        {"name": f"{get_text(lang, "btn_cancel")}", "callback": "action_cancel"}
+        {"name": get_text(lang, "btn_cancel"), "callback": "action_cancel"}
     ]
 
     text = get_text(lang, "enter_time_zone")
@@ -204,7 +204,7 @@ async def proccess_kiev(callback: CallbackQuery, state:FSMContext, bot:Bot):
     buttons = [
         {"name": f"{button_1}", "callback": "one_time"},
         {"name": f"{button_2}", "callback": "recurring"},
-        {"name": f"{get_text(lang, "btn_cancel")}", "callback": "action_cancel"}
+        {"name": get_text(lang, "btn_cancel"), "callback": "action_cancel"}
     ]
 
     text = get_text(lang, "enter_type_remainder")
@@ -250,7 +250,7 @@ async def process_custom_time_zone_text(message: Message, state: FSMContext, bot
     buttons = [
         {"name": f"{button_1}", "callback": "one_time"},
         {"name": f"{button_2}", "callback": "recurring"},
-        {"name": f"{get_text(lang, "btn_cancel")}", "callback": "action_cancel"}
+        {"name": get_text(lang, "btn_cancel"), "callback": "action_cancel"}
     ]
 
     text = get_text(lang, "enter_type_remainder")
@@ -354,7 +354,7 @@ async def proccess_days_of_week_choice(callback: CallbackQuery, state: FSMContex
     text_but = get_text(lang, "buttom_enter_day_of_week")
     spec_but = [
         {"name":f"{text_but}", "callback": "end" },
-        {"name": f"{get_text(lang, "btn_cancel")}", "callback": "action_cancel"}
+        {"name": get_text(lang, "btn_cancel"), "callback": "action_cancel"}
     ]
 
     try:
