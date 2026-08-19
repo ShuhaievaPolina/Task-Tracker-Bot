@@ -10,6 +10,7 @@ from aiogram.types import(
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 from Tasks.simple import Task
+from users.menu_lang import update_user_menu
 from users.user_setting import User
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -85,14 +86,20 @@ def get_inline_keyboard(special_button=None, buttons=None, selected_days=None):
     return builder.as_markup()
 
 
+def get_cancel_keyboard(lang:str):
+    button = {"name": f"{get_text(lang, "btn_cancel")}", "callback": "action_cancel"}
+    return get_inline_keyboard(special_button=button)
+
+
 
 @router.message(Command ("start"))
-async def start(message: Message):
+async def start(message: Message, bot: Bot):
     user_id = message.from_user.id
     await update_user_language(user_id, language=message.from_user.language_code or "en")
     lang = await get_user_lang(user_id)
     text = get_text(lang, "start")
     await message.answer(text)
+    await update_user_menu(bot, user_id, lang)
 
 
 
@@ -105,17 +112,25 @@ async def add_task(message: Message, state:FSMContext):
 
 
 
-@router.message(Command("cancel"))
-async def cancel_task(message: Message, state:FSMContext):
-    await state.clear()
-    lang = await get_user_lang(message.from_user.id)
-    text = get_text(lang, "cancel")
-    await message.answer(text)
+# @router.message(Command("cancel"))
+# async def cancel_task(message: Message, state:FSMContext):
+#     await state.clear()
+#     lang = await get_user_lang(message.from_user.id)
+#     text = get_text(lang, "cancel")
+#     await message.answer(text)
 
+
+@router.callback_query(F.data=="action_cancel")
+async def proccess_cancel_button(callback: CallbackQuery, state: FSMContext):
+    lang = await get_user_lang(callback.from_user.id)
+    await state.clear()
+    await callback.answer()
+    text = get_text(lang, "action_canceled")
+    await callback.message.edit_text(text,reply_markup=get_cancel_keyboard(lang))
 
 
 @router.message(Task.task_name, F.text)
-async def proccess_task_name(message: Message, state:FSMContext):
+async def proccess_task_name(message: Message, state: FSMContext):
     await state.update_data(task_name=message.text)
     lang = await get_user_lang(message.from_user.id)
     text = get_text(lang, "enter_time")
@@ -125,7 +140,7 @@ async def proccess_task_name(message: Message, state:FSMContext):
 
 
 @router.message(Task.hours, F.text)
-async def proccess_time(message: Message, state:FSMContext):
+async def proccess_time(message: Message, state: FSMContext):
     time_text = message.text
     lang = await get_user_lang(message.from_user.id)
 
@@ -167,7 +182,8 @@ async def proccess_time(message: Message, state:FSMContext):
     button_2 = get_text(lang, "other_zone")
     buttons = [
         {"name": f"{button_1}", "callback": "kiev"},
-        {"name": f"{button_2}", "callback": "input_time_zone"}
+        {"name": f"{button_2}", "callback": "input_time_zone"},
+        {"name": f"{get_text(lang, "btn_cancel")}", "callback": "action_cancel"}
     ]
 
     text = get_text(lang, "enter_time_zone")
@@ -187,7 +203,8 @@ async def proccess_kiev(callback: CallbackQuery, state:FSMContext, bot:Bot):
     button_2 = get_text(lang, "recurring")
     buttons = [
         {"name": f"{button_1}", "callback": "one_time"},
-        {"name": f"{button_2}", "callback": "recurring"}
+        {"name": f"{button_2}", "callback": "recurring"},
+        {"name": f"{get_text(lang, "btn_cancel")}", "callback": "action_cancel"}
     ]
 
     text = get_text(lang, "enter_type_remainder")
@@ -203,7 +220,7 @@ async def process_input_time_zone_btn(callback: CallbackQuery):
     await callback.message.edit_reply_markup(reply_markup=None)
     lang = await get_user_lang(callback.from_user.id)
     text = get_text(lang, "enter_other_time_zone")
-    await callback.message.answer(text)
+    await callback.message.answer(text,reply_markup=get_cancel_keyboard(lang))
     await callback.answer()
 
 
@@ -232,7 +249,8 @@ async def process_custom_time_zone_text(message: Message, state: FSMContext, bot
     button_2 = get_text(lang, "recurring")
     buttons = [
         {"name": f"{button_1}", "callback": "one_time"},
-        {"name": f"{button_2}", "callback": "recurring"}
+        {"name": f"{button_2}", "callback": "recurring"},
+        {"name": f"{get_text(lang, "btn_cancel")}", "callback": "action_cancel"}
     ]
 
     text = get_text(lang, "enter_type_remainder")
@@ -291,6 +309,7 @@ async def proccess_task_type_one_time(callback: CallbackQuery, state:FSMContext,
     formatted_date = run_date.strftime("%d.%m.%Y")
 
     text = get_text(lang, "message_one_time_remainder", name=name, formatted_date=formatted_date, hours=hours, minutes=minutes, time_zone=time_zone)
+    await callback.message.answer(get_text(lang,"successfully_created"))
     await callback.message.answer(text, parse_mode="HTML")
     
     await callback.answer()
@@ -333,7 +352,10 @@ async def proccess_days_of_week_choice(callback: CallbackQuery, state: FSMContex
     await state.update_data(selected_days=sel_days_of_week)
 
     text_but = get_text(lang, "buttom_enter_day_of_week")
-    spec_but = {"name":f"{text_but}", "callback": "end" }
+    spec_but = [
+        {"name":f"{text_but}", "callback": "end" },
+        {"name": f"{get_text(lang, "btn_cancel")}", "callback": "action_cancel"}
+    ]
 
     try:
         await callback.message.edit_reply_markup(reply_markup=get_inline_keyboard(special_button=spec_but, buttons=get_week(lang), selected_days=sel_days_of_week))
@@ -376,9 +398,6 @@ async def proccess_days_of_week_choice(callback: CallbackQuery, state: FSMContex
             data = await state.get_data()
 
             name = data["task_name"]
-            # run_time = data["run_time"]
-            # hours = run_time.strftime("%H")
-            # minutes = run_time.strftime("%M")
             hours = data["hours"]
             minutes = data["minutes"]
             time_zone = data["time_zone"]
@@ -402,15 +421,8 @@ async def proccess_days_of_week_choice(callback: CallbackQuery, state: FSMContex
             await add_to_db(task_id, user_id, name, None, hours, minutes, time_zone, task_type, cron_str)
 
             text = get_text(lang, "message_reccuring_remainder", name=name, hours=hours, minutes=minutes, time_zone=time_zone, str_name_day=str_name_day)
+            await callback.message.answer(get_text(lang,"successfully_created"))
             await callback.message.answer(text, parse_mode="HTML")
-            # await callback.message.answer(
-            #     f"<b>{name}</b>\n\n"
-            #     f"Время: {hours:02d}:{minutes:02d}\n"
-            #     f"Часовой пояс: {time_zone}\n"
-            #     f"Тип напоминания: Переодическое\n"
-            #     f"Повторять в {str_name_day}", 
-            #     parse_mode="HTML"
-            # )
 
             await callback.answer()
             await state.clear()
@@ -465,10 +477,11 @@ async def show_all_user_tasks(message: Message):
 async def delete_simple_task(message: Message, state:FSMContext):
     lang = await get_user_lang(message.from_user.id)
     text = get_text(lang, "enter_name")
-    await message.answer(text)
+    await message.answer(text, reply_markup=get_cancel_keyboard(lang))
     await state.set_state(DeleteTask.name)
 
 
+    #!!!!
 
 @router.message(DeleteTask.name, F.text)
 async def procces_delete_simple_task(message: Message, state:FSMContext):
@@ -516,16 +529,19 @@ async def update_language(message: Message, state: FSMContext):
         {"name": f"English", "callback": "en"},
         {"name": f"Русский", "callback": "ru"},
         {"name": f"Українська", "callback": "uk"},
+        {"name": f"{get_text(lang, "btn_cancel")}", "callback": "action_cancel"}
     ]
 
     text = get_text(lang, "enter_change_lang")
     await message.answer(text, reply_markup=get_inline_keyboard(buttons))
     
 
+
 @router.callback_query(User.lang)
-async def set_new_language(callback: CallbackQuery, state:FSMContext):
+async def set_new_language(callback: CallbackQuery, state:FSMContext, bot:Bot):
     set_lang = callback.data
     await update_user_language(callback.from_user.id, set_lang)
+    await update_user_menu(bot, callback.from_user.id, set_lang)
     lang = await get_user_lang(callback.from_user.id)
     await state.update_data(lang = set_lang)
     text = get_text(lang,"change_lang")
