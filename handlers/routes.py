@@ -87,7 +87,7 @@ def get_inline_keyboard(special_button=None, buttons=None, selected_days=None):
 
 
 def get_cancel_keyboard(lang:str):
-    button = {"name": f"{get_text(lang, "btn_cancel")}", "callback": "action_cancel"}
+    button = {"name": f"{get_text(lang, 'btn_cancel')}", "callback": "action_cancel"}
     return get_inline_keyboard(special_button=button)
 
 
@@ -107,7 +107,7 @@ async def start(message: Message, bot: Bot):
 async def add_task(message: Message, state:FSMContext):
     lang = await get_user_lang(message.from_user.id)
     text = get_text(lang, "enter_name")
-    await message.answer(text)
+    await message.answer(text, reply_markup=get_cancel_keyboard(lang))
     await state.set_state(Task.task_name)
 
 
@@ -529,7 +529,7 @@ async def update_language(message: Message, state: FSMContext):
         {"name": f"English", "callback": "en"},
         {"name": f"Русский", "callback": "ru"},
         {"name": f"Українська", "callback": "uk"},
-        {"name": f"{get_text(lang, "btn_cancel")}", "callback": "action_cancel"}
+        {"name": f"{get_text(lang, 'btn_cancel')}", "callback": "action_cancel"}
     ]
 
     text = get_text(lang, "enter_change_lang")
